@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -152,10 +153,10 @@ public class LinphoneMiniManager implements LinphoneCoreListener {
 		mLinphoneCore.setCpuCount(availableCores);
 	}
 	
-	@Override
-	public void authInfoRequested(LinphoneCore lc, String realm, String username) {
-		
-	}
+//	@Override
+//	public void authInfoRequested(LinphoneCore lc, String realm, String username) {
+//
+//	}
 
 	@Override
 	public void globalState(LinphoneCore lc, GlobalState state, String message) {
@@ -166,6 +167,11 @@ public class LinphoneMiniManager implements LinphoneCoreListener {
 	public void callState(LinphoneCore lc, LinphoneCall call, State cstate,
 			String message) {
 		Log.d("Call state: " + cstate + "(" + message + ")");
+	}
+
+	@Override
+	public void authInfoRequested(LinphoneCore linphoneCore, String s, String s1, String s2) {
+
 	}
 
 	@Override
@@ -197,11 +203,11 @@ public class LinphoneMiniManager implements LinphoneCoreListener {
 		
 	}
 
-	@Override
-	public void textReceived(LinphoneCore lc, LinphoneChatRoom cr,
-			LinphoneAddress from, String message) {
-		
-	}
+//	@Override
+//	public void textReceived(LinphoneCore lc, LinphoneChatRoom cr,
+//			LinphoneAddress from, String message) {
+//
+//	}
 
 	@Override
 	public void messageReceived(LinphoneCore lc, LinphoneChatRoom cr,
@@ -223,6 +229,16 @@ public class LinphoneMiniManager implements LinphoneCoreListener {
 	public void ecCalibrationStatus(LinphoneCore lc, EcCalibratorStatus status,
 			int delay_ms, Object data) {
 		
+	}
+
+	@Override
+	public void uploadProgressIndication(LinphoneCore linphoneCore, int i, int i1) {
+
+	}
+
+	@Override
+	public void uploadStateChanged(LinphoneCore linphoneCore, LinphoneCore.LogCollectionUploadState logCollectionUploadState, String s) {
+
 	}
 
 	@Override
@@ -285,6 +301,21 @@ public class LinphoneMiniManager implements LinphoneCoreListener {
 	@Override
 	public void displayWarning(LinphoneCore lc, String message) {
 		
+	}
+
+	@Override
+	public void fileTransferProgressIndication(LinphoneCore linphoneCore, LinphoneChatMessage linphoneChatMessage, LinphoneContent linphoneContent, int i) {
+
+	}
+
+	@Override
+	public void fileTransferRecv(LinphoneCore linphoneCore, LinphoneChatMessage linphoneChatMessage, LinphoneContent linphoneContent, byte[] bytes, int i) {
+
+	}
+
+	@Override
+	public int fileTransferSend(LinphoneCore linphoneCore, LinphoneChatMessage linphoneChatMessage, LinphoneContent linphoneContent, ByteBuffer byteBuffer, int i) {
+		return 0;
 	}
 
 }
