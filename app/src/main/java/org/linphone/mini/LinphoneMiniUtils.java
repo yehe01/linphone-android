@@ -31,7 +31,7 @@ import android.content.Context;
 public class LinphoneMiniUtils {
 	public static void copyIfNotExist(Context context, int ressourceId, String target) throws IOException {
 		File lFileToCopy = new File(target);
-		if (!lFileToCopy.exists()) {
+		if (true) {
 			copyFromPackage(context, ressourceId, lFileToCopy.getName()); 
 		}
 	}

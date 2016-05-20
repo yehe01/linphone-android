@@ -20,4 +20,3 @@ host=
 port=443
 
 [misc]
-config-uri=sip.linphone.org
