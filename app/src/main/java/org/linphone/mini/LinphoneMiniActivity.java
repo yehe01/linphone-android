@@ -20,34 +20,50 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 
 /**
  * @author Sylvain Berfini
  */
 public class LinphoneMiniActivity extends Activity {
-	private LinphoneMiniManager mManager;
-	
-	@Override
-	protected void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		
-		mManager = new LinphoneMiniManager(this);
-	}
-	
-	@Override
-	protected void onResume() {
-		super.onResume();
-	}
-	
-	@Override
-	protected void onPause() {
-		super.onPause();
-	}
-	
-	@Override
-	protected void onDestroy() {
-		mManager.destroy();
-		
-		super.onDestroy();
-	}
+    private LinphoneMiniManager mManager;
+    private Button buttonCall;
+    private TextView sipInputTV;
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.hello_world);
+
+        sipInputTV = (TextView) findViewById(R.id.AddressId);
+        mManager = new LinphoneMiniManager(LinphoneMiniActivity.this);
+        buttonCall = (Button) findViewById(R.id.CallButton);
+        buttonCall.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+//                buttonCall.setEnabled(false);
+                String sipAddr = sipInputTV.getText().toString();
+                mManager.makeCall(sipAddr);
+            }
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        mManager.destroy();
+
+        super.onDestroy();
+    }
 }

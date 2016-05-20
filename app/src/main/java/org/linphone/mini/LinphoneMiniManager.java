@@ -56,152 +56,170 @@ import android.content.pm.PackageManager.NameNotFoundException;
  * @author Sylvain Berfini
  */
 public class LinphoneMiniManager implements LinphoneCoreListener {
-	private static LinphoneMiniManager mInstance;
-	private Context mContext;
-	private LinphoneCore mLinphoneCore;
-	private Timer mTimer;
-	
-	public LinphoneMiniManager(Context c) {
-		mContext = c;
-		LinphoneCoreFactory.instance().setDebugMode(true, "Linphone Mini");
-		
-		try {
-			String basePath = mContext.getFilesDir().getAbsolutePath();
-			copyAssetsFromPackage(basePath);
-			mLinphoneCore = LinphoneCoreFactory.instance().createLinphoneCore(this, basePath + "/.linphonerc", basePath + "/linphonerc", null, mContext);
-			initLinphoneCoreValues(basePath);
-			
-			setUserAgent();
-			setFrontCamAsDefault();
-			startIterate();
-			mInstance = this;
-	        mLinphoneCore.setNetworkReachable(true); // Let's assume it's true
-		} catch (LinphoneCoreException e) {
-		} catch (IOException e) {
-		}
-	}
-	
-	public static LinphoneMiniManager getInstance() {
-		return mInstance;
-	}
-	
-	public void destroy() {
-		try {
-			mTimer.cancel();
-			mLinphoneCore.destroy();
-		}
-		catch (RuntimeException e) {
-		}
-		finally {
-			mLinphoneCore = null;
-			mInstance = null;
-		}
-	}
-	
-	private void startIterate() {
-		TimerTask lTask = new TimerTask() {
-			@Override
-			public void run() {
-				mLinphoneCore.iterate();
-			}
-		};
-		
+    private static LinphoneMiniManager mInstance;
+    private Context mContext;
+    private LinphoneCore mLinphoneCore;
+    private Timer mTimer;
+
+    public LinphoneMiniManager(Context c) {
+        mContext = c;
+        LinphoneCoreFactory.instance().setDebugMode(true, "Linphone Mini");
+
+        try {
+            String basePath = mContext.getFilesDir().getAbsolutePath();
+            copyAssetsFromPackage(basePath);
+            mLinphoneCore = LinphoneCoreFactory.instance().createLinphoneCore(this, basePath + "/.linphonerc", basePath + "/linphonerc", null, mContext);
+            initLinphoneCoreValues(basePath);
+
+            setUserAgent();
+            setFrontCamAsDefault();
+            startIterate();
+            mInstance = this;
+            mLinphoneCore.setNetworkReachable(true); // Let's assume it's true
+        } catch (LinphoneCoreException | IOException e) {
+            Log.d(e.getMessage());
+        }
+    }
+
+    public void makeCall(String sipAddr){
+        LinphoneCall call = null;
+        try {
+            call = mLinphoneCore.invite(sipAddr);
+        } catch (LinphoneCoreException e) {
+            e.printStackTrace();
+        }
+
+        if (call == null) {
+            Log.d("Could not place call to " + sipAddr);
+            Log.d("Aborting");
+            return;
+        }
+        Log.d("Call to " + sipAddr + " is in progress...");
+
+        startIterate();
+    }
+
+
+    public static LinphoneMiniManager getInstance() {
+        return mInstance;
+    }
+
+    public void destroy() {
+        try {
+            mTimer.cancel();
+            mLinphoneCore.destroy();
+        } catch (RuntimeException e) {
+            Log.d(e.getMessage());
+        } finally {
+            mLinphoneCore = null;
+            mInstance = null;
+        }
+    }
+
+    private void startIterate() {
+        TimerTask lTask = new TimerTask() {
+            @Override
+            public void run() {
+                mLinphoneCore.iterate();
+            }
+        };
+
 		/*use schedule instead of scheduleAtFixedRate to avoid iterate from being call in burst after cpu wake up*/
-		mTimer = new Timer("LinphoneMini scheduler");
-		mTimer.schedule(lTask, 0, 20); 
-	}
-	
-	private void setUserAgent() {
-		try {
-			String versionName = mContext.getPackageManager().getPackageInfo(mContext.getPackageName(), 0).versionName;
-			if (versionName == null) {
-				versionName = String.valueOf(mContext.getPackageManager().getPackageInfo(mContext.getPackageName(), 0).versionCode);
-			}
-			mLinphoneCore.setUserAgent("LinphoneMiniAndroid", versionName);
-		} catch (NameNotFoundException e) {
-		}
-	}
-	
-	private void setFrontCamAsDefault() {
-		int camId = 0;
-		AndroidCamera[] cameras = AndroidCameraConfiguration.retrieveCameras();
-		for (AndroidCamera androidCamera : cameras) {
-			if (androidCamera.frontFacing)
-				camId = androidCamera.id;
-		}
-		mLinphoneCore.setVideoDevice(camId);
-	}
-	
-	private void copyAssetsFromPackage(String basePath) throws IOException {
-		LinphoneMiniUtils.copyIfNotExist(mContext, R.raw.oldphone_mono, basePath + "/oldphone_mono.wav");
-		LinphoneMiniUtils.copyIfNotExist(mContext, R.raw.ringback, basePath + "/ringback.wav");
-		LinphoneMiniUtils.copyIfNotExist(mContext, R.raw.toy_mono, basePath + "/toy_mono.wav");
-		LinphoneMiniUtils.copyIfNotExist(mContext, R.raw.linphonerc_default, basePath + "/.linphonerc");
-		LinphoneMiniUtils.copyFromPackage(mContext, R.raw.linphonerc_factory, new File(basePath + "/linphonerc").getName());
-		LinphoneMiniUtils.copyIfNotExist(mContext, R.raw.lpconfig, basePath + "/lpconfig.xsd");
-		LinphoneMiniUtils.copyIfNotExist(mContext, R.raw.rootca, basePath + "/rootca.pem");
-	}
-	
-	private void initLinphoneCoreValues(String basePath) {
-		mLinphoneCore.setContext(mContext);
-		mLinphoneCore.setRing(null);
-		mLinphoneCore.setRootCA(basePath + "/rootca.pem");
-		mLinphoneCore.setPlayFile(basePath + "/toy_mono.wav");
-		mLinphoneCore.setChatDatabasePath(basePath + "/linphone-history.db");
-		
-		int availableCores = Runtime.getRuntime().availableProcessors();
-		mLinphoneCore.setCpuCount(availableCores);
-	}
-	
+        mTimer = new Timer("LinphoneMini scheduler");
+        mTimer.schedule(lTask, 0, 20);
+    }
+
+    private void setUserAgent() {
+        try {
+            String versionName = mContext.getPackageManager().getPackageInfo(mContext.getPackageName(), 0).versionName;
+            if (versionName == null) {
+                versionName = String.valueOf(mContext.getPackageManager().getPackageInfo(mContext.getPackageName(), 0).versionCode);
+            }
+            mLinphoneCore.setUserAgent("LinphoneMiniAndroid", versionName);
+        } catch (NameNotFoundException e) {
+        }
+    }
+
+    private void setFrontCamAsDefault() {
+        int camId = 0;
+        AndroidCamera[] cameras = AndroidCameraConfiguration.retrieveCameras();
+        for (AndroidCamera androidCamera : cameras) {
+            if (androidCamera.frontFacing)
+                camId = androidCamera.id;
+        }
+        mLinphoneCore.setVideoDevice(camId);
+    }
+
+    private void copyAssetsFromPackage(String basePath) throws IOException {
+        LinphoneMiniUtils.copyIfNotExist(mContext, R.raw.oldphone_mono, basePath + "/oldphone_mono.wav");
+        LinphoneMiniUtils.copyIfNotExist(mContext, R.raw.ringback, basePath + "/ringback.wav");
+        LinphoneMiniUtils.copyIfNotExist(mContext, R.raw.toy_mono, basePath + "/toy_mono.wav");
+        LinphoneMiniUtils.copyIfNotExist(mContext, R.raw.linphonerc_default, basePath + "/.linphonerc");
+        LinphoneMiniUtils.copyFromPackage(mContext, R.raw.linphonerc_factory, new File(basePath + "/linphonerc").getName());
+        LinphoneMiniUtils.copyIfNotExist(mContext, R.raw.lpconfig, basePath + "/lpconfig.xsd");
+        LinphoneMiniUtils.copyIfNotExist(mContext, R.raw.rootca, basePath + "/rootca.pem");
+    }
+
+    private void initLinphoneCoreValues(String basePath) {
+        mLinphoneCore.setContext(mContext);
+        mLinphoneCore.setRing(null);
+        mLinphoneCore.setRootCA(basePath + "/rootca.pem");
+        mLinphoneCore.setPlayFile(basePath + "/toy_mono.wav");
+        mLinphoneCore.setChatDatabasePath(basePath + "/linphone-history.db");
+
+        int availableCores = Runtime.getRuntime().availableProcessors();
+        mLinphoneCore.setCpuCount(availableCores);
+    }
+
 //	@Override
 //	public void authInfoRequested(LinphoneCore lc, String realm, String username) {
 //
 //	}
 
-	@Override
-	public void globalState(LinphoneCore lc, GlobalState state, String message) {
-		Log.d("Global state: " + state + "(" + message + ")");
-	}
+    @Override
+    public void globalState(LinphoneCore lc, GlobalState state, String message) {
+        Log.d("Global state: " + state + "(" + message + ")");
+    }
 
-	@Override
-	public void callState(LinphoneCore lc, LinphoneCall call, State cstate,
-			String message) {
-		Log.d("Call state: " + cstate + "(" + message + ")");
-	}
+    @Override
+    public void callState(LinphoneCore lc, LinphoneCall call, State cstate,
+                          String message) {
+        Log.d("Call state: " + cstate + "(" + message + ")");
+    }
 
-	@Override
-	public void authInfoRequested(LinphoneCore linphoneCore, String s, String s1, String s2) {
+    @Override
+    public void authInfoRequested(LinphoneCore linphoneCore, String s, String s1, String s2) {
 
-	}
+    }
 
-	@Override
-	public void callStatsUpdated(LinphoneCore lc, LinphoneCall call,
-			LinphoneCallStats stats) {
-		
-	}
+    @Override
+    public void callStatsUpdated(LinphoneCore lc, LinphoneCall call,
+                                 LinphoneCallStats stats) {
 
-	@Override
-	public void callEncryptionChanged(LinphoneCore lc, LinphoneCall call,
-			boolean encrypted, String authenticationToken) {
-		
-	}
+    }
 
-	@Override
-	public void registrationState(LinphoneCore lc, LinphoneProxyConfig cfg,
-			RegistrationState cstate, String smessage) {
-		Log.d("Registration state: " + cstate + "(" + smessage + ")");
-	}
+    @Override
+    public void callEncryptionChanged(LinphoneCore lc, LinphoneCall call,
+                                      boolean encrypted, String authenticationToken) {
 
-	@Override
-	public void newSubscriptionRequest(LinphoneCore lc, LinphoneFriend lf,
-			String url) {
-		
-	}
+    }
 
-	@Override
-	public void notifyPresenceReceived(LinphoneCore lc, LinphoneFriend lf) {
-		
-	}
+    @Override
+    public void registrationState(LinphoneCore lc, LinphoneProxyConfig cfg,
+                                  RegistrationState cstate, String smessage) {
+        Log.d("Registration state: " + cstate + "(" + smessage + ")");
+    }
+
+    @Override
+    public void newSubscriptionRequest(LinphoneCore lc, LinphoneFriend lf,
+                                       String url) {
+
+    }
+
+    @Override
+    public void notifyPresenceReceived(LinphoneCore lc, LinphoneFriend lf) {
+
+    }
 
 //	@Override
 //	public void textReceived(LinphoneCore lc, LinphoneChatRoom cr,
@@ -209,113 +227,113 @@ public class LinphoneMiniManager implements LinphoneCoreListener {
 //
 //	}
 
-	@Override
-	public void messageReceived(LinphoneCore lc, LinphoneChatRoom cr,
-			LinphoneChatMessage message) {
-		Log.d("Message received from " + cr.getPeerAddress().asString() + " : " + message.getText() + "(" + message.getExternalBodyUrl() + ")");
-	}
+    @Override
+    public void messageReceived(LinphoneCore lc, LinphoneChatRoom cr,
+                                LinphoneChatMessage message) {
+        Log.d("Message received from " + cr.getPeerAddress().asString() + " : " + message.getText() + "(" + message.getExternalBodyUrl() + ")");
+    }
 
-	@Override
-	public void isComposingReceived(LinphoneCore lc, LinphoneChatRoom cr) {
-		Log.d("Composing received from " + cr.getPeerAddress().asString());
-	}
+    @Override
+    public void isComposingReceived(LinphoneCore lc, LinphoneChatRoom cr) {
+        Log.d("Composing received from " + cr.getPeerAddress().asString());
+    }
 
-	@Override
-	public void dtmfReceived(LinphoneCore lc, LinphoneCall call, int dtmf) {
-		
-	}
+    @Override
+    public void dtmfReceived(LinphoneCore lc, LinphoneCall call, int dtmf) {
 
-	@Override
-	public void ecCalibrationStatus(LinphoneCore lc, EcCalibratorStatus status,
-			int delay_ms, Object data) {
-		
-	}
+    }
 
-	@Override
-	public void uploadProgressIndication(LinphoneCore linphoneCore, int i, int i1) {
+    @Override
+    public void ecCalibrationStatus(LinphoneCore lc, EcCalibratorStatus status,
+                                    int delay_ms, Object data) {
 
-	}
+    }
 
-	@Override
-	public void uploadStateChanged(LinphoneCore linphoneCore, LinphoneCore.LogCollectionUploadState logCollectionUploadState, String s) {
+    @Override
+    public void uploadProgressIndication(LinphoneCore linphoneCore, int i, int i1) {
 
-	}
+    }
 
-	@Override
-	public void notifyReceived(LinphoneCore lc, LinphoneCall call,
-			LinphoneAddress from, byte[] event) {
-		
-	}
+    @Override
+    public void uploadStateChanged(LinphoneCore linphoneCore, LinphoneCore.LogCollectionUploadState logCollectionUploadState, String s) {
 
-	@Override
-	public void transferState(LinphoneCore lc, LinphoneCall call,
-			State new_call_state) {
-		
-	}
+    }
 
-	@Override
-	public void infoReceived(LinphoneCore lc, LinphoneCall call,
-			LinphoneInfoMessage info) {
-		
-	}
+    @Override
+    public void notifyReceived(LinphoneCore lc, LinphoneCall call,
+                               LinphoneAddress from, byte[] event) {
 
-	@Override
-	public void subscriptionStateChanged(LinphoneCore lc, LinphoneEvent ev,
-			SubscriptionState state) {
-		
-	}
+    }
 
-	@Override
-	public void notifyReceived(LinphoneCore lc, LinphoneEvent ev,
-			String eventName, LinphoneContent content) {
-		Log.d("Notify received: " + eventName + " -> " + content.getDataAsString());
-	}
+    @Override
+    public void transferState(LinphoneCore lc, LinphoneCall call,
+                              State new_call_state) {
 
-	@Override
-	public void publishStateChanged(LinphoneCore lc, LinphoneEvent ev,
-			PublishState state) {
-		
-	}
+    }
 
-	@Override
-	public void configuringStatus(LinphoneCore lc,
-			RemoteProvisioningState state, String message) {
-		Log.d("Configuration state: " + state + "(" + message + ")");
-	}
+    @Override
+    public void infoReceived(LinphoneCore lc, LinphoneCall call,
+                             LinphoneInfoMessage info) {
 
-	@Override
-	public void show(LinphoneCore lc) {
-		
-	}
+    }
 
-	@Override
-	public void displayStatus(LinphoneCore lc, String message) {
-		
-	}
+    @Override
+    public void subscriptionStateChanged(LinphoneCore lc, LinphoneEvent ev,
+                                         SubscriptionState state) {
 
-	@Override
-	public void displayMessage(LinphoneCore lc, String message) {
-		
-	}
+    }
 
-	@Override
-	public void displayWarning(LinphoneCore lc, String message) {
-		
-	}
+    @Override
+    public void notifyReceived(LinphoneCore lc, LinphoneEvent ev,
+                               String eventName, LinphoneContent content) {
+        Log.d("Notify received: " + eventName + " -> " + content.getDataAsString());
+    }
 
-	@Override
-	public void fileTransferProgressIndication(LinphoneCore linphoneCore, LinphoneChatMessage linphoneChatMessage, LinphoneContent linphoneContent, int i) {
+    @Override
+    public void publishStateChanged(LinphoneCore lc, LinphoneEvent ev,
+                                    PublishState state) {
 
-	}
+    }
 
-	@Override
-	public void fileTransferRecv(LinphoneCore linphoneCore, LinphoneChatMessage linphoneChatMessage, LinphoneContent linphoneContent, byte[] bytes, int i) {
+    @Override
+    public void configuringStatus(LinphoneCore lc,
+                                  RemoteProvisioningState state, String message) {
+        Log.d("Configuration state: " + state + "(" + message + ")");
+    }
 
-	}
+    @Override
+    public void show(LinphoneCore lc) {
 
-	@Override
-	public int fileTransferSend(LinphoneCore linphoneCore, LinphoneChatMessage linphoneChatMessage, LinphoneContent linphoneContent, ByteBuffer byteBuffer, int i) {
-		return 0;
-	}
+    }
+
+    @Override
+    public void displayStatus(LinphoneCore lc, String message) {
+
+    }
+
+    @Override
+    public void displayMessage(LinphoneCore lc, String message) {
+
+    }
+
+    @Override
+    public void displayWarning(LinphoneCore lc, String message) {
+
+    }
+
+    @Override
+    public void fileTransferProgressIndication(LinphoneCore linphoneCore, LinphoneChatMessage linphoneChatMessage, LinphoneContent linphoneContent, int i) {
+
+    }
+
+    @Override
+    public void fileTransferRecv(LinphoneCore linphoneCore, LinphoneChatMessage linphoneChatMessage, LinphoneContent linphoneContent, byte[] bytes, int i) {
+
+    }
+
+    @Override
+    public int fileTransferSend(LinphoneCore linphoneCore, LinphoneChatMessage linphoneChatMessage, LinphoneContent linphoneContent, ByteBuffer byteBuffer, int i) {
+        return 0;
+    }
 
 }
