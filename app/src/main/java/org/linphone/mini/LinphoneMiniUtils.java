@@ -35,7 +35,7 @@ public class LinphoneMiniUtils {
 			copyFromPackage(context, ressourceId, lFileToCopy.getName()); 
 		}
 	}
-	
+
 	public static void copyFromPackage(Context context, int ressourceId, String target) throws IOException {
 		FileOutputStream lOutputStream = context.openFileOutput (target, 0); 
 		InputStream lInputStream = context.getResources().openRawResource(ressourceId);
